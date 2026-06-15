@@ -1,0 +1,619 @@
+Act as a Principal Software Engineer specializing in cross-platform native desktop apps, real-time 3D graphics, WebGL/Three.js, Rust networking, and stage LED mapping tools.
+
+We are building a high-performance desktop application called:
+
+Stage Previs & LED Mapping App
+
+The app is for Windows and macOS. It allows stage designers, visual operators, and LED technicians to create a 3D previs scene, import 3D models, build LED screen layouts, map textures/video previews onto LED surfaces, import Resolume XML mapping data, save projects locally, and share a lightweight view-only preview over the local network.
+
+Use this main tech stack:
+
+Desktop shell:
+- Tauri v2
+- Rust backend
+
+Frontend:
+- React
+- TypeScript
+- Vite
+- React Three Fiber
+- @react-three/drei
+- Three.js
+- Zustand
+
+Backend:
+- Rust
+- Tauri commands
+- Axum HTTP server
+- WebSocket server for local preview sync
+- Native file read/write through Tauri/Rust
+
+Do not use a cloud backend for the MVP.
+Everything should work locally.
+
+====================================================
+MAIN GOAL
+====================================================
+
+Generate the foundational working codebase for the application.
+
+The app must include:
+
+1. Cross-platform desktop setup for Windows and macOS.
+2. 3D viewport with OrbitControls.
+3. Local file import for .fbx, .obj, and .xml.
+4. Transform inspector for selected objects.
+5. LED screen grid generator.
+6. LED resolution calculator.
+7. Texture mapping controls.
+8. Save/open project as local JSON.
+9. Local network preview server.
+10. WebSocket real-time state sync.
+11. View-only preview web client.
+12. Clean folder architecture separating Rust backend from React frontend.
+
+====================================================
+APPLICATION ARCHITECTURE
+====================================================
+
+Use this folder structure:
+
+stage-previs-led-mapper/
+├── package.json
+├── index.html
+├── vite.config.ts
+├── tsconfig.json
+├── src/
+│   ├── main.tsx
+│   ├── App.tsx
+│   ├── styles/
+│   │   └── global.css
+│   ├── store/
+│   │   ├── useSceneStore.ts
+│   │   ├── useSelectionStore.ts
+│   │   ├── useNetworkStore.ts
+│   │   └── types.ts
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── MainLayout.tsx
+│   │   │   ├── TopToolbar.tsx
+│   │   │   ├── LeftScenePanel.tsx
+│   │   │   ├── RightInspectorPanel.tsx
+│   │   │   └── BottomStatusBar.tsx
+│   │   ├── viewport/
+│   │   │   ├── StageViewport.tsx
+│   │   │   ├── SceneObjects.tsx
+│   │   │   ├── LEDScreenMesh.tsx
+│   │   │   ├── ImportedModel.tsx
+│   │   │   ├── TransformGizmo.tsx
+│   │   │   └── CameraSync.tsx
+│   │   ├── inspector/
+│   │   │   ├── TransformInspector.tsx
+│   │   │   ├── LEDConfigPanel.tsx
+│   │   │   └── TextureMappingPanel.tsx
+│   │   ├── importers/
+│   │   │   ├── FileImportPanel.tsx
+│   │   │   └── ResolumeXmlImportPanel.tsx
+│   │   └── preview/
+│   │       └── LocalPreviewInfo.tsx
+│   ├── lib/
+│   │   ├── led/
+│   │   │   ├── ledCalculations.ts
+│   │   │   └── ledPresets.ts
+│   │   ├── resolume/
+│   │   │   └── parseResolumeXml.ts
+│   │   ├── project/
+│   │   │   ├── projectSerializer.ts
+│   │   │   └── projectSchema.ts
+│   │   └── files/
+│   │       └── fileImport.ts
+│   └── preview-client/
+│       ├── PreviewApp.tsx
+│       ├── PreviewViewport.tsx
+│       └── previewClientSocket.ts
+├── src-tauri/
+│   ├── Cargo.toml
+│   ├── tauri.conf.json
+│   ├── build.rs
+│   └── src/
+│       ├── main.rs
+│       ├── commands/
+│       │   ├── mod.rs
+│       │   ├── file_commands.rs
+│       │   └── network_commands.rs
+│       ├── server/
+│       │   ├── mod.rs
+│       │   ├── preview_server.rs
+│       │   ├── websocket_hub.rs
+│       │   └── local_ip.rs
+│       └── models/
+│           ├── mod.rs
+│           └── project_file.rs
+└── README.md
+
+====================================================
+DATA MODELS
+====================================================
+
+Create strong TypeScript types for the frontend.
+
+Important data types:
+
+SceneObject:
+- id
+- name
+- type: "led-screen" | "imported-model" | "stage" | "camera" | "note"
+- position: [number, number, number]
+- rotation: [number, number, number]
+- scale: [number, number, number]
+- visible
+- locked
+- layerId
+
+LEDScreen:
+- id
+- name
+- widthMeters
+- heightMeters
+- cabinetWidthMm
+- cabinetHeightMm
+- pixelPitchMm
+- cabinetsX
+- cabinetsY
+- resolutionWidth
+- resolutionHeight
+- mapping:
+  - textureOffsetX
+  - textureOffsetY
+  - textureScaleX
+  - textureScaleY
+  - textureRotation
+  - mirrorX
+  - mirrorY
+  - fitMode: "fit" | "fill" | "stretch"
+
+ImportedModel:
+- id
+- name
+- filePath
+- fileType: "fbx" | "obj"
+- transform
+- materialMode
+
+ResolumeSlice:
+- id
+- name
+- sourceX
+- sourceY
+- sourceWidth
+- sourceHeight
+- targetScreenId
+- opacity
+- enabled
+
+ProjectFile:
+- version
+- projectName
+- createdAt
+- updatedAt
+- sceneObjects
+- ledScreens
+- importedModels
+- resolumeSlices
+- cameraPresets
+- layers
+
+NetworkSyncMessage:
+- type: "camera" | "scene-state" | "texture-update" | "led-config-update"
+- payload
+- timestamp
+
+====================================================
+FRONTEND IMPLEMENTATION
+====================================================
+
+Implement the frontend foundation.
+
+Create src/main.tsx:
+- Mount React app.
+- Import global CSS.
+
+Create src/App.tsx:
+- Render MainLayout.
+
+Create MainLayout:
+- Full-screen dark UI.
+- Top toolbar.
+- Left scene hierarchy panel.
+- Center 3D viewport.
+- Right inspector panel.
+- Bottom status bar.
+
+Create StageViewport:
+- Use Canvas from @react-three/fiber.
+- Add PerspectiveCamera.
+- Add OrbitControls from @react-three/drei.
+- Add Grid.
+- Add Environment or simple lights.
+- Add placeholder stage floor.
+- Render all scene objects from Zustand store.
+- Support selection by clicking objects.
+- Highlight selected object.
+- Add TransformControls for selected object.
+
+Create LEDScreenMesh:
+- Render LED screen as a plane or thin box.
+- Generate visible LED cabinet grid lines.
+- Display screen name label.
+- Apply test texture or gradient material.
+- Use calculated width and height from LED configuration.
+- Make it selectable.
+
+Create TransformInspector:
+- Read selected object from Zustand.
+- Show numeric inputs for:
+  - position X/Y/Z
+  - rotation X/Y/Z in degrees
+  - scale X/Y/Z
+- When values change, update Zustand state and 3D object live.
+
+Create LEDConfigPanel:
+- If selected object is an LED screen, show:
+  - Cabinet width
+  - Cabinet height
+  - Pixel pitch
+  - Cabinets X
+  - Cabinets Y
+  - Width meters
+  - Height meters
+  - Resolution width
+  - Resolution height
+- Auto-calculate LED resolution:
+  cabinet pixel width = cabinetWidthMm / pixelPitchMm
+  cabinet pixel height = cabinetHeightMm / pixelPitchMm
+  total resolution width = cabinet pixel width * cabinetsX
+  total resolution height = cabinet pixel height * cabinetsY
+
+Create TextureMappingPanel:
+- Texture offset X/Y
+- Texture scale X/Y
+- Rotation
+- Mirror X/Y
+- Fit mode
+- Add placeholder texture test patterns:
+  - checkerboard
+  - grid
+  - color bars
+  - solid color
+
+Create FileImportPanel:
+- Add buttons:
+  - Import OBJ
+  - Import FBX
+  - Import Resolume XML
+- Use Tauri native dialog or invoke Rust command.
+- Store imported file references in Zustand.
+- For MVP, if real FBX/OBJ loading is complex, create a placeholder imported object with file metadata and prepare loader components.
+
+Create parseResolumeXml:
+- Parse XML string using DOMParser.
+- Extract common node names when available:
+  - screen
+  - slice
+  - name
+  - bounds
+  - input
+  - output
+- Handle unknown XML gracefully.
+- Return ResolumeSlice[].
+- Do not crash if XML structure is different.
+
+Create projectSerializer:
+- Serialize Zustand scene state into ProjectFile JSON.
+- Restore ProjectFile JSON into Zustand.
+
+====================================================
+ZUSTAND STORE
+====================================================
+
+Create useSceneStore with:
+- sceneObjects
+- ledScreens
+- importedModels
+- resolumeSlices
+- layers
+- selectedObjectId
+- addLEDScreen()
+- updateObjectTransform()
+- updateLEDScreenConfig()
+- updateTextureMapping()
+- addImportedModel()
+- importResolumeSlices()
+- saveProjectState()
+- loadProjectState()
+- duplicateObject()
+- deleteObject()
+- setObjectVisibility()
+- setObjectLocked()
+
+Use subscribeWithSelector where useful for network sync.
+
+Create useNetworkStore with:
+- serverRunning
+- localIp
+- previewUrl
+- connectedClients
+- startPreviewServer()
+- stopPreviewServer()
+- broadcastCameraState()
+- broadcastSceneState()
+- broadcastTextureUpdate()
+
+====================================================
+RUST BACKEND IMPLEMENTATION
+====================================================
+
+Use Tauri v2 style.
+
+Create Rust modules:
+
+src-tauri/src/main.rs:
+- Initialize Tauri app.
+- Register commands:
+  - open_project_file
+  - save_project_file
+  - read_import_file
+  - start_preview_server
+  - stop_preview_server
+  - get_local_network_ip
+- Start server only when requested by frontend.
+- Use shared app state for preview server handle.
+
+src-tauri/src/commands/file_commands.rs:
+Implement:
+- read_import_file(path: String) -> Result<String, String>
+- save_project_file(path: String, json: String) -> Result<(), String>
+- open_project_file(path: String) -> Result<String, String>
+
+src-tauri/src/commands/network_commands.rs:
+Implement:
+- get_local_network_ip() -> Result<String, String>
+- start_preview_server(port: Option<u16>) -> Result<PreviewServerInfo, String>
+- stop_preview_server() -> Result<(), String>
+
+src-tauri/src/server/local_ip.rs:
+- Detect local IPv4 address.
+- Prefer non-loopback IP.
+- Fallback to 127.0.0.1.
+
+src-tauri/src/server/preview_server.rs:
+- Start an HTTP server on local IP.
+- Serve a lightweight preview HTML page.
+- Expose:
+  GET /
+  GET /preview.js
+  GET /health
+  WebSocket /ws
+- Bind to port 18080 by default.
+- If port is busy, try the next available port.
+- Return local preview URL to frontend:
+  http://LOCAL_IP:PORT
+
+src-tauri/src/server/websocket_hub.rs:
+- Maintain connected WebSocket clients.
+- Broadcast messages to all clients.
+- Support message types:
+  - camera
+  - scene-state
+  - texture-update
+  - led-config-update
+  - ping
+  - pong
+- Track connected client count.
+
+Important:
+The MVP preview server can serve a simple HTML page that connects to WebSocket and displays received JSON.
+After the first MVP works, the preview client can be upgraded to a full WebGL scene.
+
+====================================================
+LOCAL NETWORK PREVIEW BEHAVIOR
+====================================================
+
+Desktop app:
+- User clicks "Start Preview Server".
+- Rust backend detects local IP.
+- Rust backend starts HTTP/WebSocket server.
+- Frontend receives preview URL.
+- UI displays:
+  "Preview available at http://192.168.x.x:18080"
+- Other devices on same network can open the URL.
+- Preview clients connect to WebSocket.
+- Desktop sends camera state and active LED texture mapping state.
+- Preview clients update their view.
+
+Real-time sync:
+- In StageViewport, observe camera position, target, zoom, and rotation.
+- Throttle sync to avoid sending too many messages.
+- Send camera sync message through Tauri invoke to Rust backend.
+- Rust backend broadcasts it to all WebSocket clients.
+- Also sync selected LED texture mapping and screen config.
+
+====================================================
+PLACEHOLDER LED SCREEN ARRAY
+====================================================
+
+Create a default scene on first load:
+
+- Stage floor: 12m wide × 8m deep
+- Main LED screen:
+  - Name: Main LED Wall
+  - Position: [0, 3, -3]
+  - Rotation: [0, 0, 0]
+  - Cabinets X: 12
+  - Cabinets Y: 5
+  - Cabinet size: 500mm × 500mm
+  - Pixel pitch: 3.9mm
+- Side LED left:
+  - Position: [-4.5, 2.5, -2.8]
+  - Cabinets X: 4
+  - Cabinets Y: 5
+- Side LED right:
+  - Position: [4.5, 2.5, -2.8]
+  - Cabinets X: 4
+  - Cabinets Y: 5
+
+All LED screens must be selectable.
+The transform inspector must control their position, rotation, and scale.
+
+====================================================
+CONFIG FILES
+====================================================
+
+Provide these files:
+
+package.json:
+- Scripts:
+  - dev
+  - build
+  - tauri dev
+  - tauri build
+- Dependencies:
+  - react
+  - react-dom
+  - three
+  - @react-three/fiber
+  - @react-three/drei
+  - zustand
+  - uuid
+  - lucide-react
+- Dev dependencies:
+  - typescript
+  - vite
+  - @vitejs/plugin-react
+  - @tauri-apps/cli
+
+vite.config.ts:
+- React plugin.
+- Tauri-compatible dev server config.
+- Fixed dev server port.
+
+src-tauri/Cargo.toml:
+- tauri
+- serde
+- serde_json
+- tokio
+- axum
+- tower-http
+- futures-util
+- local-ip-address or equivalent
+- uuid
+
+src-tauri/tauri.conf.json:
+- Configure product name.
+- Configure app identifier.
+- Configure build commands.
+- Configure Windows/macOS targets.
+- Configure app window size.
+- Allow required file system/dialog capabilities.
+
+====================================================
+UI DESIGN
+====================================================
+
+Use a professional dark interface.
+
+Visual direction:
+- Dark background
+- Compact technical panels
+- Blue accent color
+- Thin grid lines
+- Clear selected-object outline
+- Numeric precision fields
+- Minimal but production-ready layout
+
+Top toolbar buttons:
+- New
+- Import 3D
+- Import XML
+- Add LED Screen
+- Save
+- Open
+- Start Preview Server
+- Share View
+- Export Screenshot
+
+Left panel:
+- Scene hierarchy
+- Layers
+- Resolume XML slices
+
+Right panel:
+- Transform inspector
+- LED config
+- Texture mapping
+
+Bottom:
+- Status text
+- Selected object name
+- Total LED resolution
+- Preview server status
+
+====================================================
+ACCEPTANCE CRITERIA
+====================================================
+
+The generated app should:
+
+1. Launch as a Tauri desktop app.
+2. Show a 3D viewport with grid, stage floor, and LED screens.
+3. Allow selecting LED screens.
+4. Show transform values in inspector.
+5. Allow editing position, rotation, and scale.
+6. Re-render object transform changes instantly.
+7. Calculate LED resolution from cabinet and pixel pitch settings.
+8. Save project state to JSON.
+9. Open project JSON and restore the scene.
+10. Import XML text and parse placeholder Resolume slices.
+11. Start a local preview server.
+12. Show local network preview URL.
+13. Accept WebSocket connections from preview clients.
+14. Broadcast camera and LED state messages.
+15. Include clean, readable, modular code.
+
+====================================================
+IMPORTANT IMPLEMENTATION NOTES
+====================================================
+
+Start with a working MVP.
+Do not over-engineer the first version.
+
+If FBX/OBJ loading through native file paths is complicated in Tauri because of browser security limitations, create the architecture and placeholder object first, then explain what needs to be finished.
+
+For video textures, start with static texture/test pattern mapping first.
+Keep the API ready for video texture later.
+
+For Resolume XML, do not assume one fixed XML structure.
+Implement a defensive parser that extracts useful slice-like data when possible.
+
+For local preview, first serve a simple HTML + WebSocket debug page.
+Then structure the code so it can later load a lightweight React Three Fiber preview client.
+
+Please generate:
+1. Complete folder architecture.
+2. All key config files.
+3. Rust backend commands.
+4. Rust preview HTTP/WebSocket server.
+5. Zustand stores and TypeScript types.
+6. React layout components.
+7. Main 3D canvas with selectable LED screens.
+8. Transform inspector.
+9. LED config calculator.
+10. Save/open project JSON logic.
+11. Preview server UI.
+12. README with setup and run instructions.
+
+After generating code, clearly explain:
+- How to run the app.
+- Which features are fully implemented.
+- Which features are placeholders.
+- What should be built next.

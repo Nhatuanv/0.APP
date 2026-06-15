@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 # Stage Previs & LED Mapping App
 
 Desktop MVP for stage previs, LED wall layout, local JSON project storage, defensive Resolume XML import, and local preview sharing.
@@ -51,4 +53,5 @@ npm run tauri build
 2. Upgrade the preview page to a React Three Fiber client.
 3. Add layer editing and richer Resolume slice-to-screen assignment.
 4. Add camera preset management and screenshot export polish.
+>>>>>>> 351bbea1d7a7576c1992f67fe2b8ce4c464b56eb
 # 0.APP

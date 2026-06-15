@@ -1,0 +1,20 @@
+# Context
+The Rust toolchain is successfully installed on this machine. We are ready to initialize the project directory for our Stage Previs & LED Mapping native desktop application.
+
+# Objective
+Please guide the initial setup and write the necessary boilerplate code for a Tauri v2 project using React (TypeScript) and Vite for the frontend.
+
+# Architecture Setup
+1. Scaffold a new Tauri project using Vite, React, and TypeScript.
+2. Install the required 3D packages in the frontend:
+   - `three`
+   - `@types/three`
+   - `@react-three/fiber`
+   - `@react-three/drei`
+   - `lucide-react` (for UI icons)
+3. Ensure the Rust `src-tauri/Cargo.toml` is configured properly.
+
+# Initial Code implementation
+1. Implement a basic layout with a sidebar inspector panel (for location, rotation, scale inputs) and a main 3D canvas viewport.
+2. Inside the 3D canvas, set up a simple `OrbitControls` scene containing a grid helper and a placeholder 3D box representing an LED panel.
+3. Hook up the sidebar transform inputs so that changing X, Y, or Z values dynamically updates the placeholder box's position in the 3D scene.
